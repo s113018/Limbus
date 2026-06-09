@@ -1,0 +1,1945 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>你是 Limbus Company 裡的誰？</title>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* ===========================
+       CSS 自訂變數 & 全域設定
+    =========================== */
+    :root {
+      --bg-deepest:  #0a0a0c;
+      --bg-dark:     #111116;
+      --bg-panel:    #18181f;
+      --bg-card:     #1e1e28;
+      --border:      #2a2a38;
+      --border-bright: #3d3d55;
+      --crimson:     #8b1a1a;
+      --crimson-glow:#c0392b;
+      --crimson-soft:#d64242;
+      --gold:        #b8922a;
+      --gold-light:  #e0b84a;
+      --text-primary:#e8e4dc;
+      --text-muted:  #7a7a90;
+      --text-faint:  #4a4a60;
+      --accent-blue: #2d3a8c;
+      --accent-purple:#5a2d8c;
+      --radar-fill:  rgba(139,26,26,0.25);
+      --radar-stroke:#c0392b;
+      --font-display:'Georgia', 'Times New Roman', serif;
+      --font-body:   'Segoe UI', 'Arial', sans-serif;
+    }
+
+    /* ===== 基礎重置 ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg-deepest);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      overflow-x: hidden;
+      /* 背景紋理：微妙的十字線條 */
+      background-image:
+        linear-gradient(rgba(139,26,26,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(139,26,26,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    /* ===========================
+       頂部裝飾橫幅
+    =========================== */
+    .top-banner {
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--crimson), var(--gold), var(--crimson), transparent);
+    }
+
+    /* ===========================
+       主容器
+    =========================== */
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 20px 60px;
+    }
+
+    /* ===========================
+       首頁（封面）
+    =========================== */
+    #page-intro {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .intro-eyebrow {
+      font-size: 0.75rem;
+      letter-spacing: 0.35em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+
+    /* 主標題：大型、血紅漸層 */
+    .intro-title {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 7vw, 4.2rem);
+      font-weight: 700;
+      line-height: 1.15;
+      background: linear-gradient(135deg, #e8e4dc 30%, #c0392b 70%, #b8922a);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+      text-shadow: none;
+    }
+
+    .intro-subtitle {
+      font-family: var(--font-display);
+      font-size: clamp(1rem, 3vw, 1.5rem);
+      color: var(--text-muted);
+      margin-bottom: 40px;
+      letter-spacing: 0.05em;
+    }
+
+    /* 火焰分隔線 */
+    .flame-divider {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 32px 0;
+      width: 100%;
+      max-width: 500px;
+    }
+    .flame-divider::before, .flame-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--crimson));
+    }
+    .flame-divider::after {
+      background: linear-gradient(90deg, var(--crimson), transparent);
+    }
+    .flame-divider span { color: var(--crimson-soft); font-size: 1.4rem; }
+
+    .intro-desc {
+      max-width: 600px;
+      font-size: 1rem;
+      line-height: 1.9;
+      color: var(--text-muted);
+      margin-bottom: 48px;
+    }
+    .intro-desc strong { color: var(--gold-light); }
+
+    /* 角色名稱列表預覽 */
+    .char-preview {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      max-width: 680px;
+      margin-bottom: 56px;
+    }
+    .char-tag {
+      padding: 6px 16px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      background: var(--bg-panel);
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .char-tag:hover { border-color: var(--crimson); color: var(--crimson-soft); }
+
+    /* 開始按鈕 */
+    .btn-start {
+      display: inline-block;
+      padding: 18px 64px;
+      background: var(--crimson);
+      color: #fff;
+      font-size: 1.05rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      border: none;
+      cursor: pointer;
+      position: relative;
+      clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+      transition: background 0.25s, box-shadow 0.25s;
+      font-family: var(--font-body);
+    }
+    .btn-start:hover {
+      background: var(--crimson-glow);
+      box-shadow: 0 0 32px rgba(192,57,43,0.45);
+    }
+
+    .intro-warning {
+      margin-top: 36px;
+      font-size: 0.78rem;
+      color: var(--text-faint);
+      letter-spacing: 0.03em;
+    }
+
+    /* ===========================
+       測驗頁面
+    =========================== */
+    #page-quiz { display: none; padding-top: 40px; }
+
+    /* 進度條 */
+    .progress-wrap {
+      margin-bottom: 36px;
+    }
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 10px;
+    }
+    .progress-label {
+      font-size: 0.78rem;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+    .progress-count {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      color: var(--gold);
+    }
+    .progress-track {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--crimson), var(--gold));
+      border-radius: 2px;
+      transition: width 0.4s ease;
+      width: 0%;
+    }
+
+    /* 問題卡片 */
+    .question-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-top: 2px solid var(--crimson);
+      padding: 36px 40px;
+      margin-bottom: 28px;
+      position: relative;
+    }
+
+    .question-number {
+      font-size: 0.72rem;
+      letter-spacing: 0.25em;
+      color: var(--crimson-soft);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .question-text {
+      font-size: 1.15rem;
+      line-height: 1.75;
+      color: var(--text-primary);
+      font-family: var(--font-display);
+      margin-bottom: 32px;
+    }
+
+    /* 選項 */
+    .options-list { list-style: none; }
+
+    .option-item {
+      margin-bottom: 12px;
+    }
+
+    .option-label {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 16px 20px;
+      border: 1px solid var(--border);
+      background: var(--bg-panel);
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      user-select: none;
+    }
+    .option-label:hover {
+      border-color: var(--border-bright);
+      background: var(--bg-dark);
+    }
+
+    /* 隱藏原生 radio */
+    .option-label input[type="radio"] { display: none; }
+
+    /* 選項字母標識 */
+    .option-key {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border: 1px solid var(--border-bright);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+
+    .option-text {
+      font-size: 0.97rem;
+      line-height: 1.65;
+      color: var(--text-muted);
+      padding-top: 2px;
+      transition: color 0.2s;
+    }
+
+    /* 已選狀態 */
+    .option-item.selected .option-label {
+      border-color: var(--crimson);
+      background: rgba(139,26,26,0.12);
+    }
+    .option-item.selected .option-key {
+      background: var(--crimson);
+      border-color: var(--crimson);
+      color: #fff;
+    }
+    .option-item.selected .option-text {
+      color: var(--text-primary);
+    }
+
+    /* 導航按鈕列 */
+    .nav-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: space-between;
+      margin-top: 8px;
+    }
+
+    .btn-nav {
+      padding: 14px 36px;
+      font-size: 0.9rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      border: 1px solid var(--border-bright);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-family: var(--font-body);
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+      flex: 1;
+    }
+    .btn-nav:hover:not(:disabled) {
+      border-color: var(--text-muted);
+      color: var(--text-primary);
+      background: var(--bg-panel);
+    }
+    .btn-nav:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .btn-nav.primary {
+      border-color: var(--crimson);
+      color: var(--crimson-soft);
+    }
+    .btn-nav.primary:hover:not(:disabled) {
+      background: var(--crimson);
+      color: #fff;
+      box-shadow: 0 0 20px rgba(192,57,43,0.3);
+    }
+
+    /* 未作答提示 */
+    .unanswered-hint {
+      text-align: center;
+      color: var(--crimson-soft);
+      font-size: 0.82rem;
+      margin-top: 10px;
+      min-height: 20px;
+      letter-spacing: 0.04em;
+    }
+
+    /* ===========================
+       結果頁面
+    =========================== */
+    #page-result { display: none; padding-top: 40px; }
+
+    /* 結果頁動畫 */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes glowPulse {
+      0%, 100% { text-shadow: 0 0 20px rgba(192,57,43,0.4); }
+      50%       { text-shadow: 0 0 50px rgba(192,57,43,0.8), 0 0 80px rgba(192,57,43,0.3); }
+    }
+
+    .result-reveal { animation: fadeInUp 0.7s ease both; }
+    .result-reveal:nth-child(2) { animation-delay: 0.15s; }
+    .result-reveal:nth-child(3) { animation-delay: 0.3s; }
+    .result-reveal:nth-child(4) { animation-delay: 0.45s; }
+    .result-reveal:nth-child(5) { animation-delay: 0.6s; }
+
+    /* 結果標題區 */
+    .result-header {
+      text-align: center;
+      padding: 48px 20px 40px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 40px;
+    }
+
+    .result-eyebrow {
+      font-size: 0.75rem;
+      letter-spacing: 0.35em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+
+    .result-you-are {
+      font-family: var(--font-display);
+      font-size: clamp(1rem, 3vw, 1.3rem);
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .result-char-name {
+      font-family: var(--font-display);
+      font-size: clamp(2.5rem, 9vw, 5.5rem);
+      font-weight: 700;
+      color: var(--crimson-soft);
+      animation: glowPulse 3s ease-in-out infinite;
+      line-height: 1;
+      margin-bottom: 24px;
+    }
+
+    .result-tagline {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      font-style: italic;
+      max-width: 500px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* 結果卡片通用 */
+    .result-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 32px 36px;
+      margin-bottom: 24px;
+    }
+
+    .result-card-title {
+      font-size: 0.72rem;
+      letter-spacing: 0.25em;
+      color: var(--crimson-soft);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .result-card p {
+      font-size: 0.97rem;
+      line-height: 1.9;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    .result-card p:last-child { margin-bottom: 0; }
+    .result-card strong { color: var(--gold-light); }
+
+    /* 優勢弱點列表 */
+    .trait-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 4px;
+    }
+    @media (max-width: 560px) { .trait-grid { grid-template-columns: 1fr; } }
+
+    .trait-col h4 {
+      font-size: 0.78rem;
+      letter-spacing: 0.15em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+    .trait-col ul { list-style: none; }
+    .trait-col ul li {
+      padding: 6px 0;
+      font-size: 0.93rem;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .trait-col ul li::before {
+      content: '▸ ';
+      color: var(--crimson-soft);
+    }
+
+    /* 雷達圖容器 */
+    .radar-wrap {
+      max-width: 380px;
+      margin: 0 auto 24px;
+    }
+    .radar-labels {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .radar-label-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .radar-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--crimson);
+    }
+
+    /* 傾向分析行 */
+    .tendency-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 560px) { .tendency-grid { grid-template-columns: 1fr; } }
+
+    .tendency-item {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      padding: 18px 20px;
+    }
+    .tendency-item h5 {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .tendency-item p {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* 重新測驗按鈕 */
+    .btn-restart {
+      display: block;
+      width: 100%;
+      max-width: 340px;
+      margin: 40px auto 0;
+      padding: 18px 0;
+      text-align: center;
+      background: transparent;
+      border: 1px solid var(--border-bright);
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      cursor: pointer;
+      font-family: var(--font-body);
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-restart:hover {
+      border-color: var(--crimson);
+      color: var(--crimson-soft);
+    }
+
+    /* 底部 */
+    .footer-note {
+      text-align: center;
+      color: var(--text-faint);
+      font-size: 0.72rem;
+      letter-spacing: 0.05em;
+      margin-top: 60px;
+      padding-bottom: 40px;
+    }
+
+    /* ===========================
+       響應式
+    =========================== */
+    @media (max-width: 600px) {
+      .question-card { padding: 24px 20px; }
+      .result-card   { padding: 24px 20px; }
+      .btn-nav       { padding: 12px 16px; font-size: 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="top-banner"></div>
+
+<!-- ============================
+     首頁（封面）
+============================= -->
+<section id="page-intro">
+  <div class="container" style="display:flex;flex-direction:column;align-items:center;">
+    <p class="intro-eyebrow">Limbus Company · 心理測驗</p>
+    <h1 class="intro-title">你是哪位罪犯？</h1>
+    <p class="intro-subtitle">探索潛藏在你靈魂深處的那個號碼</p>
+
+    <div class="flame-divider"><span>✦</span></div>
+
+    <p class="intro-desc">
+      在霧籠罩的城市，巴士穿梭於層層黑暗之中。<br>
+      每一位罪犯都帶著破碎的過去與執著的意志踏上旅途。<br><br>
+      透過 <strong>20 道心理問題</strong>，測驗將分析你的人格特質、決策模式、壓力反應，<br>
+      揭示你在 <strong>Limbus Company</strong> 宇宙中最接近的靈魂——
+    </p>
+
+    <div class="char-preview" aria-label="可能出現的角色">
+      <span class="char-tag">Dante</span>
+      <span class="char-tag">Yi Sang</span>
+      <span class="char-tag">Faust</span>
+      <span class="char-tag">Don Quixote</span>
+      <span class="char-tag">Ryoshu</span>
+      <span class="char-tag">Meursault</span>
+      <span class="char-tag">Hong Lu</span>
+      <span class="char-tag">Heathcliff</span>
+      <span class="char-tag">Ishmael</span>
+      <span class="char-tag">Rodion</span>
+      <span class="char-tag">Sinclair</span>
+      <span class="char-tag">Outis</span>
+      <span class="char-tag">Gregor</span>
+    </div>
+
+    <button class="btn-start" onclick="startQuiz()">開始測驗</button>
+    <p class="intro-warning">共 20 題 · 大約需要 5 分鐘 · 沒有正確答案</p>
+  </div>
+</section>
+
+<!-- ============================
+     測驗頁面
+============================= -->
+<section id="page-quiz">
+  <div class="container">
+    <!-- 進度條 -->
+    <div class="progress-wrap">
+      <div class="progress-header">
+        <span class="progress-label">測驗進度</span>
+        <span class="progress-count" id="progress-text">1 / 20</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+    </div>
+
+    <!-- 問題卡片 -->
+    <div class="question-card">
+      <p class="question-number" id="q-number">問題 01</p>
+      <p class="question-text" id="q-text"></p>
+      <ul class="options-list" id="options-list"></ul>
+    </div>
+
+    <!-- 導航按鈕 -->
+    <div class="nav-buttons">
+      <button class="btn-nav" id="btn-prev" onclick="prevQuestion()" disabled>← 上一題</button>
+      <button class="btn-nav primary" id="btn-next" onclick="nextQuestion()">下一題 →</button>
+    </div>
+    <p class="unanswered-hint" id="hint-text"></p>
+  </div>
+</section>
+
+<!-- ============================
+     結果頁面
+============================= -->
+<section id="page-result">
+  <div class="container">
+
+    <!-- 結果標題 -->
+    <div class="result-header result-reveal">
+      <p class="result-eyebrow">你的靈魂編號已解鎖</p>
+      <p class="result-you-are">你在 Limbus Company 中是</p>
+      <h2 class="result-char-name" id="res-name"></h2>
+      <p class="result-tagline" id="res-tagline"></p>
+    </div>
+
+    <!-- 角色簡介 & 相似原因 -->
+    <div class="result-card result-reveal">
+      <p class="result-card-title">角色分析</p>
+      <p id="res-intro"></p>
+      <p id="res-similarity"></p>
+    </div>
+
+    <!-- 優勢 & 弱點 -->
+    <div class="result-card result-reveal">
+      <p class="result-card-title">人格特質</p>
+      <div class="trait-grid">
+        <div class="trait-col">
+          <h4>✦ 優勢</h4>
+          <ul id="res-strengths"></ul>
+        </div>
+        <div class="trait-col">
+          <h4>✦ 弱點</h4>
+          <ul id="res-weaknesses"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 成長建議 -->
+    <div class="result-card result-reveal">
+      <p class="result-card-title">成長建議</p>
+      <p id="res-advice"></p>
+    </div>
+
+    <!-- 雷達圖 -->
+    <div class="result-card result-reveal">
+      <p class="result-card-title">性格雷達分析</p>
+      <div class="radar-wrap">
+        <canvas id="radar-chart"></canvas>
+      </div>
+      <div class="radar-labels">
+        <div class="radar-label-item"><div class="radar-dot"></div><span>理性</span></div>
+        <div class="radar-label-item"><div class="radar-dot" style="background:var(--gold)"></div><span>感性</span></div>
+        <div class="radar-label-item"><div class="radar-dot" style="background:#4a9d8c"></div><span>行動力</span></div>
+        <div class="radar-label-item"><div class="radar-dot" style="background:#5a4a9d"></div><span>獨立性</span></div>
+        <div class="radar-label-item"><div class="radar-dot" style="background:#9d8c4a"></div><span>社交性</span></div>
+      </div>
+    </div>
+
+    <!-- 傾向分析 -->
+    <div class="result-card result-reveal">
+      <p class="result-card-title">選項傾向分析</p>
+      <div class="tendency-grid">
+        <div class="tendency-item">
+          <h5>決策模式</h5>
+          <p id="tend-decision"></p>
+        </div>
+        <div class="tendency-item">
+          <h5>壓力反應</h5>
+          <p id="tend-stress"></p>
+        </div>
+        <div class="tendency-item">
+          <h5>團隊定位</h5>
+          <p id="tend-team"></p>
+        </div>
+        <div class="tendency-item">
+          <h5>價值觀傾向</h5>
+          <p id="tend-value"></p>
+        </div>
+      </div>
+      <p style="margin-top:20px;font-size:0.85rem;color:var(--text-faint);" id="tend-explanation"></p>
+    </div>
+
+    <button class="btn-restart" onclick="restartQuiz()">↺ 重新測驗</button>
+
+    <p class="footer-note">
+      此測驗為非官方粉絲製作 · 角色版權屬於 Project Moon<br>
+      結果依據 20 道題目的累計選擇傾向計算
+    </p>
+  </div>
+</section>
+
+<script>
+/* ========================================
+   Limbus Company 心理測驗完整 JavaScript
+   計分機制：隱藏分數陣列，每題每選項
+   對所有 13 個角色給予不同分數權重。
+   最終分數最高者為結果角色。
+   ======================================== */
+
+// ── 角色索引 ──────────────────────────────
+// 0:Dante  1:YiSang  2:Faust  3:DonQuixote  4:Ryoshu
+// 5:Meursault  6:HongLu  7:Heathcliff  8:Ishmael
+// 9:Rodion  10:Sinclair  11:Outis  12:Gregor
+
+/* ========================================
+   20 道測驗題目
+   每題 4 個選項（A/B/C/D），
+   scores 陣列共 13 個值，對應 13 位角色分數。
+   設計原則：每題最高分角色不同，
+   確保所有角色都有公平的出現機率。
+   ======================================== */
+const questions = [
+  // ─── Q1：危機領導 ───────────────────────────
+  {
+    text: "當你所在的團隊陷入混亂、沒有人知道該怎麼辦時，你通常會？",
+    options: [
+      {
+        label: "A",
+        text: "沉默地在腦中快速分析局勢，找出最優解後才開口",
+        // 分析型→Faust/YiSang；壓抑型→Meursault
+        scores: [2,4,5,1,1,3,1,0,2,1,2,2,1]
+      },
+      {
+        label: "B",
+        text: "立刻喊出「跟我來！」，用自身行動帶動眾人",
+        // 行動領導→DonQuixote/Outis
+        scores: [3,1,1,5,1,1,2,1,2,1,1,5,2]
+      },
+      {
+        label: "C",
+        text: "先確認自己重要的人是否安全，再考慮下一步",
+        // 保護執念→Heathcliff/Rodion
+        scores: [1,1,1,0,1,1,2,5,1,4,2,1,2]
+      },
+      {
+        label: "D",
+        text: "觀察眾人反應，靜靜等待最佳介入時機",
+        // 觀察等待→HongLu/Sinclair/Dante
+        scores: [3,2,2,0,3,2,5,1,2,2,3,1,1]
+      }
+    ]
+  },
+
+  // ─── Q2：壓力逃避 ───────────────────────────
+  {
+    text: "當你面對極大壓力，感覺快要喘不過氣時，你最自然的反應是？",
+    options: [
+      {
+        label: "A",
+        text: "把自己關在房間裡，寫作、閱讀或思考，整理內心",
+        scores: [1,5,3,0,2,2,1,1,1,2,3,0,2]
+      },
+      {
+        label: "B",
+        text: "找朋友開個小小派對，用歡笑把煩惱淹沒",
+        scores: [2,0,0,2,0,0,5,0,1,3,2,1,1]
+      },
+      {
+        label: "C",
+        text: "做一件需要全神貫注的事（手工、訓練、攀爬），讓身體取代思考",
+        scores: [2,1,1,3,5,3,1,2,3,1,1,2,3]
+      },
+      {
+        label: "D",
+        text: "什麼都不做，只是靜靜地讓時間過去，等待情緒自行消退",
+        scores: [2,2,2,0,1,5,1,3,2,1,2,1,2]
+      }
+    ]
+  },
+
+  // ─── Q3：人際關係 ───────────────────────────
+  {
+    text: "在你的人際圈中，你更傾向於？",
+    options: [
+      {
+        label: "A",
+        text: "擁有少數幾位極為深刻、彼此了解的好友",
+        scores: [2,5,3,1,3,3,1,3,3,3,3,1,2]
+      },
+      {
+        label: "B",
+        text: "與各式各樣的人廣泛交往，享受多元互動",
+        scores: [3,1,1,3,0,0,5,0,1,4,2,2,1]
+      },
+      {
+        label: "C",
+        text: "獨自行動，人際關係是任務需要時才建立的工具",
+        scores: [1,2,5,2,3,4,0,2,3,0,1,4,2]
+      },
+      {
+        label: "D",
+        text: "對任何人保持一定禮貌與距離，難以真正親近",
+        scores: [2,2,3,0,2,3,1,4,3,1,2,3,3]
+      }
+    ]
+  },
+
+  // ─── Q4：道德判斷 ───────────────────────────
+  {
+    text: "在一個「為了多數人犧牲少數人」的兩難情境中，你會？",
+    options: [
+      {
+        label: "A",
+        text: "理性計算，犧牲較少的一方以保全最大利益",
+        scores: [1,2,5,1,1,3,2,0,2,0,1,4,1]
+      },
+      {
+        label: "B",
+        text: "絕對不允許，想盡辦法找出第三條路",
+        scores: [4,3,1,5,2,0,2,2,2,3,3,1,2]
+      },
+      {
+        label: "C",
+        text: "理解邏輯，但仍會為少數人的不公憤憤不平",
+        scores: [3,3,1,2,1,1,3,4,2,4,3,1,3]
+      },
+      {
+        label: "D",
+        text: "視情況而定，沒有放諸四海皆準的答案",
+        scores: [3,3,2,0,3,4,2,2,3,2,2,3,2]
+      }
+    ]
+  },
+
+  // ─── Q5：自我認知 ───────────────────────────
+  {
+    text: "如果朋友問你「你最了解自己的一面是什麼」，你最可能回答？",
+    options: [
+      {
+        label: "A",
+        text: "「我知道自己不擅長什麼，所以我會避開那些。」",
+        scores: [2,3,4,0,2,3,1,1,3,2,3,2,3]
+      },
+      {
+        label: "B",
+        text: "「我知道我做決定很快，行動優先於思考。」",
+        scores: [2,0,0,5,1,1,2,1,2,1,1,4,2]
+      },
+      {
+        label: "C",
+        text: "「我知道我會為了在乎的人做任何事。」",
+        scores: [3,2,0,2,0,0,3,5,1,4,3,1,2]
+      },
+      {
+        label: "D",
+        text: "「說真的……我也還在摸索自己是誰。」",
+        scores: [4,3,2,1,1,2,2,2,2,2,4,1,2]
+      }
+    ]
+  },
+
+  // ─── Q6：價值觀 ───────────────────────────
+  {
+    text: "你認為在這個黑暗的世界中，最重要的事情是？",
+    options: [
+      {
+        label: "A",
+        text: "找到並守護讓你認為「活著值得」的東西",
+        scores: [4,3,0,2,2,1,3,4,2,4,3,1,3]
+      },
+      {
+        label: "B",
+        text: "建立秩序，讓混亂中的人都能有方向可循",
+        scores: [1,1,3,4,1,2,1,0,2,1,1,5,2]
+      },
+      {
+        label: "C",
+        text: "追求真理，不被任何謊言或幻覺矇蔽",
+        scores: [2,5,5,1,3,2,1,1,2,1,1,2,1]
+      },
+      {
+        label: "D",
+        text: "享受當下，不讓沉重的命運支配你的每一刻",
+        scores: [2,1,1,2,1,1,5,1,2,3,2,1,1]
+      }
+    ]
+  },
+
+  // ─── Q7：領導風格 ───────────────────────────
+  {
+    text: "如果你被推上領袖位置，你的領導方式最接近？",
+    options: [
+      {
+        label: "A",
+        text: "制定詳盡計畫，確保每個成員都明白自己的角色",
+        scores: [1,2,4,2,1,2,1,0,2,1,1,5,2]
+      },
+      {
+        label: "B",
+        text: "以身作則，用自己的行動感染隊員的士氣",
+        scores: [3,1,1,5,2,1,2,2,2,2,2,2,2]
+      },
+      {
+        label: "C",
+        text: "給每個人足夠空間，在需要時整合各方意見",
+        scores: [3,3,2,1,1,1,3,1,3,2,3,2,2]
+      },
+      {
+        label: "D",
+        text: "情況允許時放手，情況緊急時才接管全局",
+        scores: [2,2,3,1,3,3,2,2,3,2,2,2,3]
+      }
+    ]
+  },
+
+  // ─── Q8：情緒表達 ───────────────────────────
+  {
+    text: "當你感到憤怒，你通常如何處理這份情緒？",
+    options: [
+      {
+        label: "A",
+        text: "壓下去，等獨處時再細細消化",
+        scores: [2,4,3,0,2,5,0,2,3,2,2,2,3]
+      },
+      {
+        label: "B",
+        text: "直接說出來，不喜歡情緒積壓在心裡",
+        scores: [2,1,1,4,2,0,3,2,2,4,2,2,2]
+      },
+      {
+        label: "C",
+        text: "轉化成行動——或是強烈專注，或是劇烈運動",
+        scores: [2,1,1,2,5,2,1,4,3,2,1,3,3]
+      },
+      {
+        label: "D",
+        text: "假裝沒事，用表面的平靜遮掩內心的波濤",
+        scores: [2,2,3,0,1,3,1,3,2,1,3,2,2]
+      }
+    ]
+  },
+
+  // ─── Q9：衝突處理 ───────────────────────────
+  {
+    text: "當你與重要的人發生嚴重衝突，你的第一反應是？",
+    options: [
+      {
+        label: "A",
+        text: "嘗試分析衝突的根本原因，理性地解決",
+        scores: [2,4,5,1,1,2,2,1,2,1,2,3,1]
+      },
+      {
+        label: "B",
+        text: "主動出擊，直接正面交涉，不願讓問題懸而不決",
+        scores: [3,0,0,4,2,0,2,2,1,3,2,2,2]
+      },
+      {
+        label: "C",
+        text: "先獨自冷靜，等情緒平復後再嘗試溝通",
+        scores: [2,3,3,1,3,4,2,3,3,3,3,2,3]
+      },
+      {
+        label: "D",
+        text: "不確定要怎麼辦，有時候會先逃避這件事",
+        scores: [2,2,1,0,1,2,2,2,2,2,4,0,2]
+      }
+    ]
+  },
+
+  // ─── Q10：執念與放手 ───────────────────────────
+  {
+    text: "對你而言，「放下執念」是？",
+    options: [
+      {
+        label: "A",
+        text: "不可能的事，執念是我前進的唯一燃料",
+        scores: [2,2,2,2,3,1,1,5,2,2,2,2,3]
+      },
+      {
+        label: "B",
+        text: "困難但必要，有些事就是得讓它過去",
+        scores: [3,3,3,2,1,3,2,1,3,3,3,2,2]
+      },
+      {
+        label: "C",
+        text: "視情況而定——值得執著的就永不放棄",
+        scores: [3,2,2,4,2,2,2,3,2,3,2,3,2]
+      },
+      {
+        label: "D",
+        text: "某種程度的自我欺騙，我偶爾會假裝自己已經放下",
+        scores: [2,3,1,0,1,2,3,2,2,2,3,1,2]
+      }
+    ]
+  },
+
+  // ─── Q11：理想主義 ───────────────────────────
+  {
+    text: "有人說「理想只是幻覺，現實才是真實的」，你的看法是？",
+    options: [
+      {
+        label: "A",
+        text: "完全不同意——理想是支撐人向前走的核心",
+        scores: [3,2,0,5,1,0,2,2,1,3,3,1,2]
+      },
+      {
+        label: "B",
+        text: "部分認同，但我仍然選擇相信一些東西",
+        scores: [4,3,2,2,1,2,3,2,2,3,4,1,2]
+      },
+      {
+        label: "C",
+        text: "認同，現實的冷酷讓我早已學會不抱太大希望",
+        scores: [1,3,5,0,2,4,1,3,3,1,2,3,3]
+      },
+      {
+        label: "D",
+        text: "理想與現實都有其位置，我在兩者之間尋找平衡",
+        scores: [3,3,3,2,3,3,3,1,3,2,3,3,2]
+      }
+    ]
+  },
+
+  // ─── Q12：孤獨感 ───────────────────────────
+  {
+    text: "你如何看待「孤獨」這件事？",
+    options: [
+      {
+        label: "A",
+        text: "孤獨是一種珍貴狀態，讓我得以深入思考",
+        scores: [2,5,4,0,3,4,0,2,2,1,2,2,2]
+      },
+      {
+        label: "B",
+        text: "孤獨讓我感到不安，我需要人陪",
+        scores: [2,0,0,3,0,0,4,0,1,4,3,1,1]
+      },
+      {
+        label: "C",
+        text: "孤獨是無奈的選擇，但我學會了接受它",
+        scores: [2,2,3,1,3,3,1,4,3,2,2,3,4]
+      },
+      {
+        label: "D",
+        text: "孤獨與熱鬧我都能享受，取決於當下的心情",
+        scores: [3,2,1,2,1,1,4,1,2,3,2,2,1]
+      }
+    ]
+  },
+
+  // ─── Q13：成長方式 ───────────────────────────
+  {
+    text: "你通常是怎樣讓自己變得更強大或更成熟的？",
+    options: [
+      {
+        label: "A",
+        text: "透過閱讀、學習和反思，積累知識與智慧",
+        scores: [2,5,4,1,2,2,1,1,2,1,2,2,1]
+      },
+      {
+        label: "B",
+        text: "在實際衝突與挑戰中磨練自己，失敗也是教材",
+        scores: [3,1,1,4,4,2,2,3,3,2,2,3,3]
+      },
+      {
+        label: "C",
+        text: "觀察他人，從他人的經驗中學習並調整自己",
+        scores: [3,3,3,2,1,2,3,1,3,3,3,3,2]
+      },
+      {
+        label: "D",
+        text: "接受痛苦，讓它雕塑出更堅硬的自己",
+        scores: [2,2,2,2,3,3,1,4,3,2,2,2,4]
+      }
+    ]
+  },
+
+  // ─── Q14：對「罪」的態度 ───────────────────────────
+  {
+    text: "你如何看待一個人過去所犯的「錯誤」或「罪」？",
+    options: [
+      {
+        label: "A",
+        text: "罪行必須付出代價，但代價不等於永遠的詛咒",
+        scores: [5,2,2,3,1,2,2,1,2,3,2,2,2]
+      },
+      {
+        label: "B",
+        text: "過去的行為塑造了現在的你，但未來仍可以改寫",
+        scores: [3,3,2,3,2,2,3,1,3,4,4,2,3]
+      },
+      {
+        label: "C",
+        text: "有些罪是無法被原諒的，有些事一旦做了就永遠留著",
+        scores: [1,2,3,1,4,3,1,5,2,2,1,3,3]
+      },
+      {
+        label: "D",
+        text: "罪是相對的——誰定義罪，誰就掌握了權力",
+        scores: [2,4,4,1,3,3,2,2,2,1,1,2,1]
+      }
+    ]
+  },
+
+  // ─── Q15：忠誠對象 ───────────────────────────
+  {
+    text: "你的忠誠，最終是獻給什麼？",
+    options: [
+      {
+        label: "A",
+        text: "一個你相信的目標或使命",
+        scores: [4,2,3,5,2,2,1,1,2,2,2,3,2]
+      },
+      {
+        label: "B",
+        text: "具體的某個人，或某幾個人",
+        scores: [2,2,1,2,1,1,3,5,1,4,3,1,2]
+      },
+      {
+        label: "C",
+        text: "自己的信仰與原則",
+        scores: [2,4,5,2,4,3,1,2,3,1,2,4,2]
+      },
+      {
+        label: "D",
+        text: "老實說，我也不確定，我在尋找值得忠誠的事物",
+        scores: [3,2,1,1,1,2,2,2,2,2,4,1,2]
+      }
+    ]
+  },
+
+  // ─── Q16：對自我存在的看法 ───────────────────────────
+  {
+    text: "在某個靜夜，你突然開始思考「我為什麼存在」，你最接近的答案是？",
+    options: [
+      {
+        label: "A",
+        text: "我存在是為了完成某件還沒結束的事",
+        scores: [3,2,2,3,2,2,2,4,2,3,3,2,3]
+      },
+      {
+        label: "B",
+        text: "我存在是為了理解這個世界——或者理解我自己",
+        scores: [2,5,4,1,2,2,1,1,2,1,3,2,1]
+      },
+      {
+        label: "C",
+        text: "我不確定，但我還在試著找到答案",
+        scores: [4,3,1,2,1,2,2,2,2,2,4,1,2]
+      },
+      {
+        label: "D",
+        text: "也許存在本身就是答案——我不需要多餘的理由",
+        scores: [2,1,3,2,3,4,3,2,3,2,2,3,2]
+      }
+    ]
+  },
+
+  // ─── Q17：與他人的邊界 ───────────────────────────
+  {
+    text: "別人試圖了解你「真正的內心」時，你的感受是？",
+    options: [
+      {
+        label: "A",
+        text: "歡迎，真正的理解是我渴望的",
+        scores: [3,3,0,3,0,0,4,2,2,4,3,1,2]
+      },
+      {
+        label: "B",
+        text: "不安，我更習慣於主導自我呈現的方式",
+        scores: [1,2,4,2,3,3,1,3,3,1,2,4,2]
+      },
+      {
+        label: "C",
+        text: "無所謂，我的內心是什麼就是什麼",
+        scores: [2,2,3,2,2,4,2,2,2,2,2,2,3]
+      },
+      {
+        label: "D",
+        text: "複雜——我既想被理解，又害怕被看透",
+        scores: [3,3,1,1,1,1,2,3,2,3,4,1,2]
+      }
+    ]
+  },
+
+  // ─── Q18：面對失去 ───────────────────────────
+  {
+    text: "當你失去了一個對你非常重要的人或事物，你的應對方式是？",
+    options: [
+      {
+        label: "A",
+        text: "帶著那份失去繼續前行，讓它成為力量的一部分",
+        scores: [4,2,2,3,3,2,2,2,3,2,2,2,3]
+      },
+      {
+        label: "B",
+        text: "深深沉浸在悲傷中，必須讓自己充分感受才能走出來",
+        scores: [2,4,1,1,1,2,2,3,2,4,3,1,2]
+      },
+      {
+        label: "C",
+        text: "拒絕承認失去，用行動試圖找回或替代",
+        scores: [2,1,1,2,2,1,3,4,2,3,2,2,2]
+      },
+      {
+        label: "D",
+        text: "壓抑悲傷，默默獨自消化，不讓人看見脆弱",
+        scores: [2,2,3,1,3,4,1,3,3,1,2,3,4]
+      }
+    ]
+  },
+
+  // ─── Q19：對「命運」的態度 ───────────────────────────
+  {
+    text: "你相信人有辦法真正改變自己的命運嗎？",
+    options: [
+      {
+        label: "A",
+        text: "相信，而且我正在這麼做",
+        scores: [4,2,1,5,2,1,2,1,2,2,3,2,2]
+      },
+      {
+        label: "B",
+        text: "不相信，命運大致上已被決定，能做的只是調整細節",
+        scores: [1,3,4,0,2,4,1,3,2,1,2,3,3]
+      },
+      {
+        label: "C",
+        text: "半信半疑，也許有些東西能改變，有些不能",
+        scores: [3,3,3,2,2,2,3,2,3,3,3,3,2]
+      },
+      {
+        label: "D",
+        text: "不重要，我只在乎此時此刻我選擇做什麼",
+        scores: [2,1,2,2,3,3,4,2,3,3,2,2,2]
+      }
+    ]
+  },
+
+  // ─── Q20：給自己的標籤 ───────────────────────────
+  {
+    text: "如果用一句話來形容你在這個世界上的姿態，你會選哪一個？",
+    options: [
+      {
+        label: "A",
+        text: "「我不知道我是誰，但我仍然繼續走。」",
+        scores: [5,2,1,2,1,2,2,2,2,2,3,1,2]
+      },
+      {
+        label: "B",
+        text: "「我用思想建構世界，用邏輯看透人心。」",
+        scores: [1,5,4,1,2,2,2,1,2,0,1,3,1]
+      },
+      {
+        label: "C",
+        text: "「我活在我設定的信念裡，那就是我的現實。」",
+        scores: [2,1,2,5,3,2,2,2,2,2,2,3,2]
+      },
+      {
+        label: "D",
+        text: "「這個世界從未對我好，但我還沒打算離開。」",
+        scores: [2,2,2,1,2,2,1,4,2,2,3,2,4]
+      }
+    ]
+  }
+];
+
+/* ========================================
+   13 位角色完整資料
+   ======================================== */
+const characters = [
+  // ─── 0: Dante ────────────────────────────────
+  {
+    name: "Dante",
+    tagline: "在霧中前行的靈魂引導者，帶著遺忘的身份與不滅的意志。",
+    intro: "Dante 是 Limbus Company 巴士的管理者，一個對自身過去幾乎毫無記憶的神秘存在。他靠著一個古老的面具維持生命，在黑暗與混沌中引領一群罪犯走向未知的目的地。Dante 的特質在於面對不確定性時仍然選擇前進——不是因為有答案，而是因為停下來更可怕。",
+    similarity: "在測驗中，你的選擇顯示出一種介於<strong>理性判斷與情感抉擇之間的平衡</strong>。你在多個問題中選擇了「繼續前行」、「不確定但仍走下去」等選項，這正是 Dante 最核心的特質——在身份模糊、答案不明的情況下，仍然選擇承擔責任與領導。",
+    strengths: ["承載不確定性而不崩潰的心理韌性", "能讓他人感受到安穩的無形領導力", "對各種性格的人都保持開放與包容"],
+    weaknesses: ["對自身核心的迷茫可能造成決策猶豫", "容易因為照顧他人而忽略自己的需求", "過去的記憶空缺使你難以確立清晰的自我邊界"],
+    advice: "你不需要先找到「自己是誰」的答案才能開始行動。繼續走，在路途中你自然會拼湊出屬於你的輪廓。試著偶爾停下來問問自己真正想要的是什麼，而不只是「應該做什麼」。",
+    radar: [60, 55, 65, 55, 60],
+    tendency: {
+      decision: "在選項中傾向尋找第三條路，習慣在極端之間尋找平衡點",
+      stress: "壓力下仍然能夠維持表面的穩定，但內心波濤洶湧",
+      team: "天然的核心位置，不刻意爭取領導，但往往成為眾人的定錨",
+      value: "責任感驅動，認為自己有義務對在乎的人有所交代"
+    }
+  },
+
+  // ─── 1: Yi Sang ────────────────────────────────
+  {
+    name: "Yi Sang",
+    tagline: "用詩意解構現實，用理性觀察自己的靈魂，美麗而憂鬱的思索者。",
+    intro: "Yi Sang 是一位擁有超凡智識與敏銳觀察力的詩人與哲學家，他以近乎外科手術的精準分析世界，同時又深陷於人類情感的詩意漩渦。他的存在本身就是矛盾——用理性的工具解剖感性的世界，在冰冷的分析中看見溫柔的悲傷。",
+    similarity: "你在測驗中大量選擇了與<strong>內省、分析、深度思考</strong>相關的選項。你偏向獨處時整理思緒，透過閱讀與反思成長，並對哲學性問題（存在、命運、罪）有自己深刻的見解。這與 Yi Sang 用智識框架理解世界的方式高度吻合。",
+    strengths: ["超強的洞察力，能快速看穿事物本質", "豐富的內在世界，創意與智慧兼具", "不輕易被情緒左右的獨立判斷力"],
+    weaknesses: ["思考過多容易導致行動遲緩", "難以用普通人能理解的方式溝通自己的想法", "對世界的悲觀傾向有時會壓制行動意志"],
+    advice: "你的思考是你最強大的武器，但思考必須能夠轉化成語言，語言才能轉化成改變。試著每天為你腦中最重要的一個想法找到行動的出口，哪怕只是寫下一行字也好。",
+    radar: [90, 70, 35, 80, 35],
+    tendency: {
+      decision: "高度分析型——在行動前傾向徹底思考所有可能性與後果",
+      stress: "壓力下退回內在世界，用思考和寫作作為緩衝機制",
+      team: "智識資源提供者，負責提出旁人沒想到的角度與問題",
+      value: "以追求真理與理解為核心，不願意為了安慰接受謊言"
+    }
+  },
+
+  // ─── 2: Faust ────────────────────────────────
+  {
+    name: "Faust",
+    tagline: "用契約書交換智慧的女巫，在冷峻的外表下藏著無人知曉的目的。",
+    intro: "Faust 是一位神秘的女性罪犯，以知識為貨幣、以契約為手段行走於世界。她幾乎從不流露情緒，以近乎機械的效率解決問題，同時保留著只有她自己才知道的真實動機。她是 13 位罪犯中最難被真正理解的一位。",
+    similarity: "你的選擇在多個情境下都展現出<strong>理性優先、情緒管理嚴密、獨立行動傾向</strong>。你認為知識與真理比任何情感關係都更為可靠，並習慣在人際關係中保持一定的距離感。這種冷靜而有效率的性格核心，正是 Faust 的本質。",
+    strengths: ["極高的分析能力與問題解決效率", "不受情緒干擾的冷靜判斷", "能夠在複雜局勢中保持清醒目標"],
+    weaknesses: ["難以在需要時給予或接受情感連結", "過度依賴邏輯可能忽略無法量化的人性面向", "神秘感造成他人的誤解，阻礙深度合作"],
+    advice: "你的力量在於清醒，但清醒不等於孤立。試著偶爾讓自己進入一段不需要計算的關係——不是所有的連結都必須有交換條件。",
+    radar: [95, 45, 60, 90, 20],
+    tendency: {
+      decision: "高度目標導向——在決策中優先考慮效率與結果，排除感情因素",
+      stress: "壓力下更加收斂，藉由專注於工作本身來切斷情緒幹擾",
+      team: "核心策略家，提供高精度的分析和計畫，不以情感激勵隊伍",
+      value: "以知識和能力為最高準則，不相信沒有依據的信念"
+    }
+  },
+
+  // ─── 3: Don Quixote ────────────────────────────────
+  {
+    name: "Don Quixote",
+    tagline: "以騎士之名追逐幻想中的正義，是這個黑暗世界裡最明亮的一把火。",
+    intro: "Don Quixote 是充滿熱情與理想主義的戰士，她相信自己是傳說中的騎士化身，帶著崇高的使命感在世界上衝鋒。她的天真有時讓人捧腹，但她的勇氣卻是無可置疑的。對她來說，不相信理想是一種懦弱，而行動永遠比思考更重要。",
+    similarity: "你在測驗中多次選擇了<strong>立即行動、強調使命感、不放棄理想</strong>的選項。你相信可以改變命運，也認為建立秩序或追求正義是最重要的事。這種充沛的行動力與理想主義傾向，讓你與 Don Quixote 高度相似。",
+    strengths: ["無畏的勇氣與行動力，能鼓舞周圍的人", "對使命的強烈信仰，不容易被挫敗打倒", "以身作則的領導魅力"],
+    weaknesses: ["過於理想化，有時無視現實的複雜與殘酷", "衝動可能導致計畫不足的行動", "對他人不符合理想的行為感到難以接受"],
+    advice: "你的熱情是這個冷漠世界裡最珍貴的東西，請不要讓它熄滅。但試著也給自己的計畫多留一分鐘——真正的騎士不只有勇氣，還需要智慧。",
+    radar: [40, 50, 95, 55, 65],
+    tendency: {
+      decision: "本能型——先行動後思考，相信在行動中才能找到真正的答案",
+      stress: "壓力下反而激發更強烈的行動意志，拒絕被壓垮",
+      team: "鼓舞者與衝鋒手，用熱情與信念帶動整個隊伍的士氣",
+      value: "以正義與理想為最高準則，不妥協於「這是現實」的說法"
+    }
+  },
+
+  // ─── 4: Ryoshu ────────────────────────────────
+  {
+    name: "Ryoshu",
+    tagline: "冷酷的劍客，在極致的技藝與沉默中尋找難以言說的美。",
+    intro: "Ryoshu 是一位對美有著近乎偏執追求的殺手與藝術家。她用劍的方式如同創作，每一個動作都是對完美的追求。她幾乎不與他人建立深度連結，但對技藝與美學的執著讓她在寂靜中保持著獨特的生命力。",
+    similarity: "你選擇了許多與<strong>身體專注、獨立行動、執念轉化為技術</strong>相關的選項。你習慣在行動中消化壓力，對追求極致有著別人難以理解的堅持，也不特別需要他人的理解或陪伴。這種藉由技藝尋找自我的姿態，讓你與 Ryoshu 最為相似。",
+    strengths: ["對自己選擇的事物有著令人難以超越的專注力", "不依賴他人認可，自我標準極高", "在極端情況下仍能保持冷靜"],
+    weaknesses: ["難以與他人產生真正的情感交流", "對「美」的定義有時狹隘，難以欣賞他人的不同方式", "孤獨的自我標準可能帶來無人理解的孤立感"],
+    advice: "完美是一條永無盡頭的路，你已經比大多數人走得更深。但試著偶爾停下來欣賞一下——不是你的技藝，而是你自己這個人。你不只是你所做的事。",
+    radar: [65, 55, 80, 95, 15],
+    tendency: {
+      decision: "直覺與技術並行——不浪費時間於過多分析，憑借積累的判斷力直接切入",
+      stress: "壓力下將全部能量導入單一焦點，藉由極致的執行來壓制雜念",
+      team: "獨行俠，不依賴隊伍，但在關鍵時刻的個人能力往往讓人瞠目結舌",
+      value: "以極致與美為最高準則，對妥協與平庸有本能的排斥"
+    }
+  },
+
+  // ─── 5: Meursault ────────────────────────────────
+  {
+    name: "Meursault",
+    tagline: "活在當下的沉默巨人，用平靜的眼神直視世界的荒謬。",
+    intro: "Meursault 以加繆小說中的人物為靈感，是一個對世界反應幾乎近乎麻木的存在主義者。他不掩蓋情緒，因為情緒對他而言沒有那麼重要。他用沉默代替言語，用行動代替表達，在荒謬的世界中選擇活著——這本身就是一種回答。",
+    similarity: "你的選擇多次指向<strong>順其自然、壓抑情緒、接受現實</strong>的態度。你不特別熱切地追求理想，也不輕易被情感波動左右，選擇靜靜地等待情緒消退，用行動默默地存在。這種存在主義式的平靜，正是 Meursault 的核心。",
+    strengths: ["面對壓力和恐懼時異常穩定的心理狀態", "不被情緒劫持，能在混亂中保持清醒", "存在本身的分量——他在場，就足以穩定局面"],
+    weaknesses: ["情感疏離可能讓周圍的人感到被忽略", "對事物缺乏強烈熱情，可能喪失推動自己前進的動力", "荒謬感有時發展為虛無主義，使行動失去意義"],
+    advice: "你已經學會了不被世界的噪音淹沒，這是一種罕見的能力。但試著讓自己找到至少一件事，讓你願意投入熱情——不是因為「應該」，而是因為你真的想要。",
+    radar: [55, 60, 45, 75, 30],
+    tendency: {
+      decision: "沉著等待型——不急於表態，讓事情自然發展後才介入",
+      stress: "壓力下選擇沉默與等待，相信時間自然會帶來改變",
+      team: "穩定的基石，不搶風頭但在需要時願意擋在前面",
+      value: "以「活在當下的真實感受」為最高準則，拒絕被社會期待綁架"
+    }
+  },
+
+  // ─── 6: Hong Lu ────────────────────────────────
+  {
+    name: "Hong Lu",
+    tagline: "來自豪門的享樂主義者，用輕描淡寫遮蓋了比任何人都更深刻的孤獨。",
+    intro: "Hong Lu 是一位出身名門的年輕人，表面上以享樂為生，言行間充滿輕浮的玩笑與灑脫。但在這張燦爛的笑臉背後，藏著對真正連結的渴望，以及在富裕生活中從未獲得滿足的寂寞。他讓所有人都喜歡他，但幾乎沒有人真正了解他。",
+    similarity: "你在測驗中多次選擇了<strong>社交導向、享受當下、廣泛人際</strong>相關的選項，同時也顯示出對真正被理解的渴望。你習慣用歡笑填補空缺，享受人群的熱鬧，但深夜的孤獨感你也比任何人都清楚。這是 Hong Lu 最真實的樣子。",
+    strengths: ["天生的社交魅力，能快速與任何人建立關係", "在壓力下保持輕鬆的能力（即使是裝出來的）", "廣闊的視野與豐富的人生閱歷"],
+    weaknesses: ["用玩笑掩蓋真實想法，難以建立深度關係", "享樂主義傾向使其難以面對長期的艱辛", "旁人看不到你的認真面，容易被低估"],
+    advice: "你不需要永遠是房間裡最有趣的人。試著讓至少一個人看見你笑容背後的那個你——那個也會害怕、也會渴望被真正理解的你。那個你，值得被愛。",
+    radar: [40, 70, 60, 45, 95],
+    tendency: {
+      decision: "情境感知型——根據氣氛與他人反應靈活調整策略，而非執行固定計畫",
+      stress: "壓力下傾向社交轉移，用熱鬧的互動稀釋內心的緊張",
+      team: "氣氛調節者與人脈連結者，讓整個隊伍保持凝聚力與人情味",
+      value: "以「此刻的真實感受與連結」為最高準則，拒絕為了未來犧牲當下"
+    }
+  },
+
+  // ─── 7: Heathcliff ────────────────────────────────
+  {
+    name: "Heathcliff",
+    tagline: "被世界遺棄的憤怒之魂，用恨意支撐前行，卻在恨意中燃燒著深不見底的愛。",
+    intro: "以《咆哮山莊》的人物為靈感，Heathcliff 是一個被過去的傷與愛所困的靈魂。他的憤怒是真實的，他的執念是真實的，但在那之下，是一份近乎自我毀滅的深刻情感。他拒絕展示脆弱，但他的每一個行動都在吶喊著對某些人、某些事的無法放手。",
+    similarity: "你多次選擇了<strong>為重要的人保護一切、執念無法輕易放下、情緒被壓抑但強烈</strong>的選項。你清楚地知道誰對你最重要，也清楚你會為了那些人做任何事——即使那個「任何事」包括了危險的代價。",
+    strengths: ["對所愛之人有近乎絕對的保護本能", "在逆境中爆發的超強意志力", "情感的深度讓你的存在充滿分量"],
+    weaknesses: ["過去的傷與憤怒容易遮蔽理性判斷", "對特定人物的執念可能帶來自我傷害", "難以接受幫助，習慣一人承擔所有重量"],
+    advice: "你的感情深度是你最大的力量，也是你最深的傷口。試著學習：被保護的人，有時候最想要的不是保護，而是你卸下盔甲的那個瞬間。讓自己被看見，也需要勇氣。",
+    radar: [40, 65, 75, 70, 30],
+    tendency: {
+      decision: "情感驅動型——在涉及重要人物的情境下，情感凌駕一切邏輯考量",
+      stress: "壓力下情緒強烈內化，轉為更高強度的行動或自我封閉",
+      team: "守衛者，默默承擔最危險的位置，但不輕易吐露內心的真實狀態",
+      value: "以「絕不背棄自己在乎的人」為最高準則，這是他的核心身份"
+    }
+  },
+
+  // ─── 8: Ishmael ────────────────────────────────
+  {
+    name: "Ishmael",
+    tagline: "在深淵中游泳的老水手，清醒地注視著危險，帶著疤前行。",
+    intro: "以《白鯨記》的敘述者為靈感，Ishmael 是一個見過太多、歷練太深的靈魂。她以清醒的眼睛直視世界的殘酷，但不以此為藉口放棄行動。她的判斷力來自於實際的碰壁與傷痛，她的冷靜是歷經滄桑後才磨出來的——不是天生的麻木，而是選擇的沉著。",
+    similarity: "你的選擇顯示出<strong>務實冷靜、從經驗學習、不過度理想化</strong>的特質。你理解世界的複雜，對「命運」的看法也不天真，但你仍然選擇繼續前行。這種老靈魂的清醒與韌性，正是 Ishmael 最核心的特質。",
+    strengths: ["對現實有清醒且不帶幻覺的認識", "從失敗與傷痛中快速提取教訓的能力", "在複雜局勢中保持冷靜判斷的穩定性"],
+    weaknesses: ["過度清醒有時帶來過於沉重的疲憊感", "對人性的悲觀可能影響對新連結的開放度", "習慣承受而不求助，獨自扛得太多"],
+    advice: "你已經走過了足夠多的深水，知道如何在風浪中保持方向。現在試著讓自己偶爾休息——不是放棄，而是讓自己有力氣繼續走下去。你不需要永遠堅強。",
+    radar: [70, 60, 65, 65, 50],
+    tendency: {
+      decision: "經驗導向型——依賴過去的親身經歷而非抽象原則，務實而直接",
+      stress: "壓力下啟動生存模式，過濾情緒雜訊，專注於最核心的問題",
+      team: "老手與顧問，提供務實的判斷和對風險的精準評估",
+      value: "以「真實的生存與實際的行動」為最高準則，不相信虛浮的理念"
+    }
+  },
+
+  // ─── 9: Rodion ────────────────────────────────
+  {
+    name: "Rodion",
+    tagline: "帶著罪惡感與溫柔並行的靈魂，在犯錯與救贖之間無法停止地愛著。",
+    intro: "以杜斯妥也夫斯基筆下的羅斯基尼科夫為靈感，Rodion 是一個在強烈情感、道德掙扎與對人的深切關懷之間撕裂的人。她對他人有著天然的同情心，卻也時常被自己的行為所帶來的罪惡感壓垮。她選擇愛，即使愛讓她更脆弱。",
+    similarity: "你的選擇多次展現出<strong>對他人的深切同情、難以切斷情感連結、從傷痛中深度感受</strong>的特質。你傾向在失去時充分地哀悼，也傾向在衝突中優先顧及他人的感受。這種將情感視為人格核心的態度，正是 Rodion 的本質。",
+    strengths: ["對他人的情感高度敏感，善於在情緒上支持他人", "真誠的道德感，不輕易為自己的錯誤找藉口", "強大的情感連結能力，能與各種人建立深度關係"],
+    weaknesses: ["容易因他人的苦難而過度自責", "情感過重有時影響清晰判斷", "對自己比對他人嚴苛許多"],
+    advice: "你已經學會了如何愛別人，現在試著學習如何愛自己——不是自私，而是認清：你也值得被你給予他人的那份溫柔對待。允許自己不完美，也是一種勇氣。",
+    radar: [45, 80, 50, 40, 75],
+    tendency: {
+      decision: "情感與道德並行型——決策中高度考慮對他人的影響與道德正當性",
+      stress: "壓力下向內沉浸，深度感受後才能走出，需要情感的充分處理",
+      team: "情感支柱，理解每個成員的心理狀態，在人心渙散時凝聚人心",
+      value: "以「對他人的愛與自我的道德一致性」為最高準則"
+    }
+  },
+
+  // ─── 10: Sinclair ────────────────────────────────
+  {
+    name: "Sinclair",
+    tagline: "在黑暗中摸索自我的少年，每一次跌倒都讓他更接近真實的自己。",
+    intro: "以赫塞《德米安》的主角為靈感，Sinclair 是 13 位罪犯中最年輕、最不確定自己是誰的一位。他帶著強烈的想要屬於某個地方、被某人認可的渴望，在摸索與掙扎中逐漸成形。他的不完整不是缺點，而是一段正在進行中的旅程。",
+    similarity: "你的選擇多次展現出<strong>對自我認同的摸索、對被理解的渴望、在選擇中透露出的成長焦慮</strong>。你承認自己不確定，也承認自己還在找答案。這種誠實的不完整感，正是 Sinclair 最動人的地方。",
+    strengths: ["對自我成長有著真誠的渴望與開放的態度", "不輕易放棄對自我理解的探索", "對他人的同理心與柔軟的情感"],
+    weaknesses: ["缺乏確定感容易讓你被強勢他人影響", "成長焦慮有時轉化為自我懷疑", "渴望被認可可能帶來不必要的委屈"],
+    advice: "不知道自己是誰，並不代表你沒有價值——它代表你還在成長。每一次你誠實地承認「我不確定」，你都比那些假裝確定的人更接近真實的自己。繼續問，繼續走。",
+    radar: [45, 65, 50, 45, 65],
+    tendency: {
+      decision: "探索型——決策時充滿猶豫但最終會嘗試，習慣在行動中找到答案",
+      stress: "壓力下容易自我懷疑，但同時也容易因壓力而加速成長",
+      team: "學習者與共鳴者，能讓隊伍中的其他人感到被接納與理解",
+      value: "以「找到真實的自我、不再假裝」為最深層的渴望與驅動力"
+    }
+  },
+
+  // ─── 11: Outis ────────────────────────────────
+  {
+    name: "Outis",
+    tagline: "無名的指揮官，以絕對的紀律與策略稱霸混亂，從不將自我置於任務之前。",
+    intro: "Outis 是一位以嚴格紀律和精準策略著稱的前軍事指揮官。她壓制個人情感，以完成任務為第一準則。她不需要被理解，也不追求被喜愛——她只需要隊伍能夠運轉。但在那冷峻的外表之下，她對所帶領的人有著自己的方式表達的責任感。",
+    similarity: "你多次選擇了<strong>制定計畫、以身作則、紀律性行動、壓制個人感受</strong>的選項。你傾向在人際關係中保持一定的距離，以效率為優先，並對自己的信念有著高度的自我要求。這與 Outis 的指揮官姿態高度吻合。",
+    strengths: ["卓越的組織能力與全局視野", "在高壓下仍能保持計畫性行動", "以責任感為核心的領導力"],
+    weaknesses: ["過度壓抑自我情感，忽視自身心理健康", "紀律嚴格有時讓他人感到難以親近", "將任務凌駕於人際，可能在關鍵時刻失去支持"],
+    advice: "你已經學會了如何領導，但領導不只是指揮——真正讓人願意跟隨你的，不是你的計畫，而是偶爾讓他們看到你也是人。試著展現你的一點脆弱，那會讓你的隊伍更強大。",
+    radar: [85, 40, 85, 80, 45],
+    tendency: {
+      decision: "系統性計畫型——在行動前詳盡規劃，強調角色分工與執行紀律",
+      stress: "壓力下加強控制感，藉由更嚴格的計畫與秩序維持穩定",
+      team: "指揮核心，負責整合所有資源與確保任務執行效率",
+      value: "以「任務完成與紀律維持」為最高準則，個人感受在此之後"
+    }
+  },
+
+  // ─── 12: Gregor ────────────────────────────────
+  {
+    name: "Gregor",
+    tagline: "在異化與改變中仍然關懷他人，是這個殘忍世界裡最默默的守護者。",
+    intro: "以卡夫卡《變形記》的葛雷哥爾為靈感，Gregor 是一個外表已被改造、但內心對人性仍有著深切渴望的存在。他承受著身體與靈魂的雙重異化，卻仍然選擇為他人存在。他的悲傷是沉默的，他的愛是無聲的。",
+    similarity: "你的選擇中出現了多次<strong>默默承受、為他人付出、用行動代替語言、孤獨中繼續前行</strong>的傾向。你習慣將自己的痛苦壓在最下面，把最好的一面留給別人，即使沒有人注意到你的付出。",
+    strengths: ["對他人的需求有著細膩的感知", "在艱難環境中仍能維持行動的意志", "承受能力超乎常人，能撐起他人無法承受的重量"],
+    weaknesses: ["長期壓抑自我需求可能導致積累已久的崩潰", "不善表達自己的需求，容易被誤解為麻木", "對自身改變的接受需要更多時間與空間"],
+    advice: "你已經給予了太多，也等待了太久。試著開口說出你需要的東西——不是因為你軟弱，而是因為讓別人有機會回報你的付出，也是一種給予他們的禮物。",
+    radar: [50, 55, 55, 60, 50],
+    tendency: {
+      decision: "承擔型——傾向承擔他人不願意面對的困境，默默成為問題的緩衝層",
+      stress: "壓力下內化所有衝擊，向外保持平靜，內心獨自消化",
+      team: "無聲的支撐者，做最多最累的事，卻最不容易被看見",
+      value: "以「為重要的人存在、不讓他們受苦」作為行動的最深層動機"
+    }
+  }
+];
+
+/* ========================================
+   全域狀態
+   ======================================== */
+let currentQuestion = 0;   // 當前題目索引（0-19）
+let answers = new Array(20).fill(null); // 每題答案（選項索引 0-3，或 null）
+let scores  = new Array(13).fill(0);    // 累積各角色分數
+let radarChart = null;                  // Chart.js 實例
+
+/* ========================================
+   頁面控制函式
+   ======================================== */
+
+/** 開始測驗：隱藏首頁，顯示測驗頁 */
+function startQuiz() {
+  document.getElementById('page-intro').style.display = 'none';
+  document.getElementById('page-quiz').style.display  = 'block';
+  renderQuestion();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/** 重新測驗：重置所有狀態，回到首頁 */
+function restartQuiz() {
+  currentQuestion = 0;
+  answers  = new Array(20).fill(null);
+  scores   = new Array(13).fill(0);
+
+  // 銷毀舊圖表
+  if (radarChart) { radarChart.destroy(); radarChart = null; }
+
+  document.getElementById('page-result').style.display = 'none';
+  document.getElementById('page-intro').style.display  = 'flex';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ========================================
+   測驗渲染
+   ======================================== */
+
+/** 渲染當前問題 */
+function renderQuestion() {
+  const q   = questions[currentQuestion];
+  const idx = currentQuestion;
+
+  // 題號與題目
+  document.getElementById('q-number').textContent =
+    `問題 ${String(idx + 1).padStart(2, '0')}`;
+  document.getElementById('q-text').textContent = q.text;
+
+  // 清空選項清單
+  const list = document.getElementById('options-list');
+  list.innerHTML = '';
+
+  // 渲染 4 個選項
+  q.options.forEach((opt, optIdx) => {
+    const li    = document.createElement('li');
+    li.className = 'option-item' + (answers[idx] === optIdx ? ' selected' : '');
+
+    const label = document.createElement('label');
+    label.className = 'option-label';
+
+    const radio = document.createElement('input');
+    radio.type  = 'radio';
+    radio.name  = 'q' + idx;
+    radio.value = optIdx;
+    radio.checked = (answers[idx] === optIdx);
+    radio.addEventListener('change', () => selectOption(optIdx));
+
+    const keySpan  = document.createElement('span');
+    keySpan.className = 'option-key';
+    keySpan.textContent = opt.label;
+
+    const textSpan = document.createElement('span');
+    textSpan.className = 'option-text';
+    textSpan.textContent = opt.text;
+
+    label.appendChild(radio);
+    label.appendChild(keySpan);
+    label.appendChild(textSpan);
+    li.appendChild(label);
+    list.appendChild(li);
+  });
+
+  // 更新進度條
+  updateProgress();
+
+  // 更新按鈕狀態
+  document.getElementById('btn-prev').disabled = (currentQuestion === 0);
+  const isLast = (currentQuestion === questions.length - 1);
+  document.getElementById('btn-next').textContent =
+    isLast ? '查看結果 ✓' : '下一題 →';
+
+  // 清除提示
+  document.getElementById('hint-text').textContent = '';
+}
+
+/** 選擇選項 */
+function selectOption(optIdx) {
+  // 記錄答案
+  answers[currentQuestion] = optIdx;
+
+  // 更新 UI 選中狀態
+  document.querySelectorAll('.option-item').forEach((li, i) => {
+    li.classList.toggle('selected', i === optIdx);
+  });
+
+  // 清除提示
+  document.getElementById('hint-text').textContent = '';
+}
+
+/** 更新進度條 */
+function updateProgress() {
+  const answered = answers.filter(a => a !== null).length;
+  const pct = ((currentQuestion + 1) / questions.length * 100).toFixed(1);
+
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-text').textContent =
+    `${currentQuestion + 1} / ${questions.length}`;
+}
+
+/** 下一題 */
+function nextQuestion() {
+  // 若未作答，提示
+  if (answers[currentQuestion] === null) {
+    document.getElementById('hint-text').textContent = '請選擇一個選項後再繼續';
+    return;
+  }
+
+  if (currentQuestion < questions.length - 1) {
+    currentQuestion++;
+    renderQuestion();
+    // 捲動到題目頂部
+    document.getElementById('page-quiz').scrollIntoView({ behavior: 'smooth' });
+  } else {
+    // 最後一題，計算結果
+    calculateResult();
+  }
+}
+
+/** 上一題 */
+function prevQuestion() {
+  if (currentQuestion > 0) {
+    currentQuestion--;
+    renderQuestion();
+    document.getElementById('page-quiz').scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+/* ========================================
+   計分與結果
+   ======================================== */
+
+/** 計算並顯示結果 */
+function calculateResult() {
+  // 重置分數
+  scores = new Array(13).fill(0);
+
+  // 累積每題每選項的角色分數
+  answers.forEach((ansIdx, qIdx) => {
+    if (ansIdx === null) return;
+    const scoreArr = questions[qIdx].options[ansIdx].scores;
+    scoreArr.forEach((s, charIdx) => { scores[charIdx] += s; });
+  });
+
+  // 找出最高分角色
+  let maxScore = -1, resultIdx = 0;
+  scores.forEach((s, i) => {
+    if (s > maxScore) { maxScore = s; resultIdx = i; }
+  });
+
+  const char = characters[resultIdx];
+
+  // 計算雷達圖數值（基於所有選項的累積結果）
+  const radarData = computeRadar();
+
+  // 計算傾向分析
+  const tendency = computeTendency(resultIdx);
+
+  // 顯示結果
+  showResult(char, radarData, tendency);
+}
+
+/**
+ * 計算雷達圖五維度分數
+ * 理性、感性、行動力、獨立性、社交性
+ * 根據 20 題作答傾向推算，每題對五維度各有貢獻
+ */
+function computeRadar() {
+  // 每個選項對五維度的貢獻：[理性, 感性, 行動力, 獨立性, 社交性]
+  // 與問題設計邏輯對應
+  const optionDimensions = [
+    // Q1
+    [[4,1,1,2,1],[1,2,4,1,3],[1,3,2,1,2],[2,2,2,1,3]],
+    // Q2
+    [[3,2,1,3,1],[1,3,1,1,4],[1,1,4,3,1],[2,1,1,3,1]],
+    // Q3
+    [[2,3,1,2,2],[1,2,3,1,5],[3,1,1,5,1],[3,1,1,3,1]],
+    // Q4
+    [[4,1,2,3,1],[1,3,3,1,3],[1,4,2,2,2],[3,2,2,2,2]],
+    // Q5
+    [[3,1,1,4,1],[1,1,5,2,2],[1,3,2,1,2],[1,2,1,1,2]],
+    // Q6
+    [[1,3,2,2,2],[2,1,3,3,2],[4,1,2,3,1],[1,2,2,1,4]],
+    // Q7
+    [[3,1,3,3,2],[1,2,4,2,3],[2,2,2,2,3],[3,2,3,3,2]],
+    // Q8
+    [[2,2,1,4,1],[1,3,3,1,4],[1,1,5,2,1],[3,2,1,3,1]],
+    // Q9
+    [[4,1,2,3,1],[1,2,4,1,3],[3,2,1,3,2],[1,2,1,1,2]],
+    // Q10
+    [[1,4,3,2,1],[2,3,2,2,2],[2,2,3,2,2],[2,3,1,1,2]],
+    // Q11
+    [[1,4,3,1,2],[2,3,2,2,2],[4,1,1,3,1],[3,2,2,2,2]],
+    // Q12
+    [[3,2,1,4,1],[1,3,1,1,5],[2,2,1,3,1],[2,2,2,2,3]],
+    // Q13
+    [[4,1,2,3,1],[1,2,4,2,3],[3,2,2,2,3],[1,3,3,3,1]],
+    // Q14
+    [[2,3,2,2,2],[2,3,2,2,2],[1,3,2,3,1],[4,2,1,3,1]],
+    // Q15
+    [[2,2,3,2,2],[1,4,2,1,3],[3,2,2,4,1],[1,2,1,1,2]],
+    // Q16
+    [[1,3,2,2,2],[4,2,1,3,1],[1,2,1,1,2],[2,2,2,3,2]],
+    // Q17
+    [[1,3,2,1,4],[3,1,1,4,1],[2,1,2,3,1],[2,3,1,1,3]],
+    // Q18
+    [[2,2,3,2,2],[1,4,1,1,3],[1,3,3,2,2],[2,2,1,3,1]],
+    // Q19
+    [[2,2,4,2,2],[3,1,1,3,1],[2,2,2,2,2],[2,2,3,2,2]],
+    // Q20
+    [[1,2,2,1,2],[5,1,1,4,1],[1,2,3,2,2],[1,3,2,1,2]]
+  ];
+
+  const dim = [0, 0, 0, 0, 0];
+  answers.forEach((ans, qi) => {
+    if (ans === null) return;
+    const contrib = optionDimensions[qi][ans];
+    contrib.forEach((v, di) => { dim[di] += v; });
+  });
+
+  // 正規化到 0-100
+  const max = Math.max(...dim);
+  const min = Math.min(...dim);
+  return dim.map(v => Math.round(((v - min) / (max - min || 1)) * 70 + 20));
+}
+
+/**
+ * 計算傾向分析文字
+ * 依據選項分布推導決策模式、壓力反應、團隊定位、價值觀
+ */
+function computeTendency(charIdx) {
+  const char = characters[charIdx];
+
+  // 計算 A/B/C/D 選項各選了幾次
+  const counts = [0, 0, 0, 0];
+  answers.forEach(a => { if (a !== null) counts[a]++; });
+  const dominant = counts.indexOf(Math.max(...counts));
+  const dominantLabel = ['A', 'B', 'C', 'D'][dominant];
+
+  const explanations = {
+    decision: `你在 20 題中有 ${counts[dominant]} 題選擇了選項 ${dominantLabel}，` +
+              `顯示你的決策傾向以「${['分析思考', '主動行動', '情感與保護', '等待觀察'][dominant]}」為主導。` +
+              `${char.tendency.decision}`,
+    stress:   char.tendency.stress +
+              `（基於你在壓力與情緒題組中的一致傾向）`,
+    team:     char.tendency.team,
+    value:    char.tendency.value
+  };
+
+  const rawExplanation = `你的 ${counts[0]} 個 A 選（分析型）、` +
+    `${counts[1]} 個 B 選（行動型）、` +
+    `${counts[2]} 個 C 選（情感型）、` +
+    `${counts[3]} 個 D 選（等待觀察型）` +
+    `，整體畫出一個以「${['分析', '行動', '情感', '觀察'][dominant]}」為核心的人格輪廓，` +
+    `這與 ${char.name} 的核心特質高度吻合。`;
+
+  return { ...explanations, raw: rawExplanation };
+}
+
+/* ========================================
+   顯示結果頁面
+   ======================================== */
+function showResult(char, radarData, tendency) {
+  // 切換頁面
+  document.getElementById('page-quiz').style.display   = 'none';
+  document.getElementById('page-result').style.display = 'block';
+
+  // 填入基本資訊
+  document.getElementById('res-name').textContent    = char.name;
+  document.getElementById('res-tagline').textContent = char.tagline;
+  document.getElementById('res-intro').innerHTML     = `<strong>【角色簡介】</strong> ${char.intro}`;
+  document.getElementById('res-similarity').innerHTML= `<strong>【你與他相似的原因】</strong> ${char.similarity}`;
+
+  // 優勢清單
+  const sl = document.getElementById('res-strengths');
+  sl.innerHTML = '';
+  char.strengths.forEach(s => {
+    const li = document.createElement('li');
+    li.textContent = s;
+    sl.appendChild(li);
+  });
+
+  // 弱點清單
+  const wl = document.getElementById('res-weaknesses');
+  wl.innerHTML = '';
+  char.weaknesses.forEach(w => {
+    const li = document.createElement('li');
+    li.textContent = w;
+    wl.appendChild(li);
+  });
+
+  // 成長建議
+  document.getElementById('res-advice').textContent = char.advice;
+
+  // 傾向分析
+  document.getElementById('tend-decision').textContent   = tendency.decision;
+  document.getElementById('tend-stress').textContent     = tendency.stress;
+  document.getElementById('tend-team').textContent       = tendency.team;
+  document.getElementById('tend-value').textContent      = tendency.value;
+  document.getElementById('tend-explanation').textContent = tendency.raw;
+
+  // 渲染雷達圖（稍作延遲確保 DOM 準備好）
+  setTimeout(() => renderRadar(radarData), 200);
+
+  // 捲動到結果頂部
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ========================================
+   Chart.js 雷達圖
+   ======================================== */
+function renderRadar(data) {
+  const ctx = document.getElementById('radar-chart').getContext('2d');
+
+  // 若已有舊圖表，先銷毀
+  if (radarChart) { radarChart.destroy(); }
+
+  radarChart = new Chart(ctx, {
+    type: 'radar',
+    data: {
+      labels: ['理性', '感性', '行動力', '獨立性', '社交性'],
+      datasets: [{
+        label: '你的人格特質',
+        data: data,
+        backgroundColor: 'rgba(139,26,26,0.22)',
+        borderColor: '#c0392b',
+        pointBackgroundColor: '#c0392b',
+        pointBorderColor: '#e8e4dc',
+        pointHoverBackgroundColor: '#e0b84a',
+        borderWidth: 2,
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      scales: {
+        r: {
+          min: 0,
+          max: 100,
+          ticks: {
+            display: false,
+            stepSize: 20
+          },
+          grid: {
+            color: 'rgba(255,255,255,0.08)'
+          },
+          angleLines: {
+            color: 'rgba(255,255,255,0.08)'
+          },
+          pointLabels: {
+            color: '#7a7a90',
+            font: { size: 13, family: "'Segoe UI', Arial, sans-serif" }
+          }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1e1e28',
+          borderColor: '#2a2a38',
+          borderWidth: 1,
+          titleColor: '#e8e4dc',
+          bodyColor: '#7a7a90'
+        }
+      }
+    }
+  });
+}
+</script>
+
+</body>
+</html>
